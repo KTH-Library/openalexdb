@@ -1,0 +1,42 @@
+version: '3.1'
+
+services:
+
+  db:
+    image: postgres
+    environment:
+      - POSTGRES_USER=kthb
+      - POSTGRES_PASSWORD=example
+      - POSTGRES_DB=db
+    volumes:
+      - ./init-user-db.sh:/docker-entrypoint-initdb.d/init-user-db.sh
+#      - ./bibmon.sql:/docker-entrypoint-initdb.d/z_bibmon.sql
+      - ./csv-files:/csv-files
+      - ./load.sql:/load.sql
+      - ./schema.sql:/schema.sql
+
+  pgadmin:
+    image: dpage/pgadmin4:6.6
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=dba@kthb.se
+      - PGADMIN_DEFAULT_PASSWORD=changeme
+      - PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION=False
+    ports:
+      - 80:80
+    depends_on:
+      - db
+
+  pgloader:
+    image: dimitri/pgloader:ccl.latest
+    command: bash -c "sleep 10 && pgloader /tmp/oa.db postgresql://kthb:example@db/docker"
+    volumes:
+      - ./oa.db:/tmp/oa.db
+    depends_on:
+      - db
+
+  cloudbeaver:
+    image: dbeaver/cloudbeaver:prod
+    ports:
+      - 8080:8978
+    depends_on:
+      - db
